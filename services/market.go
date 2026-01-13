@@ -33,7 +33,7 @@ func (s *MarketService) GetCryptoPrices(limit int) ([]map[string]interface{}, er
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
-	// CoinGecko Markets API - sorted by total volume
+
 	url := "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=volume_desc&per_page=50&page=1&sparkline=false&price_change_percentage=24h"
 	resp, err := client.Get(url)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -47,23 +47,32 @@ func (s *MarketService) GetCryptoPrices(limit int) ([]map[string]interface{}, er
 		return s.GetMockCrypto(limit), nil
 	}
 
-	// Manual sort by volume to be doubly sure
+	// Robust sort by volume
 	sort.Slice(data, func(i, j int) bool {
-		valI, _ := data[i]["total_volume"].(float64)
-		valJ, _ := data[j]["total_volume"].(float64)
-		return valI > valJ
+		vi := toFloat64(data[i]["total_volume"])
+		vj := toFloat64(data[j]["total_volume"])
+		return vi > vj
 	})
 
 	var normalized []map[string]interface{}
 	for _, coin := range data {
+		symbol, _ := coin["symbol"].(string)
+
+		if symbol == "usdt" || symbol == "usdc" || symbol == "fdusd" || symbol == "dai" {
+			continue
+		}
+
 		if limit > 0 && len(normalized) >= limit {
 			break
 		}
 
-		symbol, _ := coin["symbol"].(string)
 		name, _ := coin["name"].(string)
 		currentPrice := fmt.Sprintf("%v", coin["current_price"])
 		change24h := fmt.Sprintf("%v", coin["price_change_percentage_24h"])
+
+		if symbol == "btc" {
+			fmt.Printf("BTC Found! Volume Ranking Position: %d\n", len(normalized)+1)
+		}
 
 		if symbol == "" {
 			continue
@@ -197,4 +206,24 @@ func parseFloat(s interface{}) float64 {
 	str = strings.ReplaceAll(str, "%", "")
 	f, _ := strconv.ParseFloat(str, 64)
 	return f
+}
+
+func toFloat64(v interface{}) float64 {
+	switch i := v.(type) {
+	case float64:
+		return i
+	case float32:
+		return float64(i)
+	case int64:
+		return float64(i)
+	case int32:
+		return float64(i)
+	case int:
+		return float64(i)
+	case string:
+		f, _ := strconv.ParseFloat(i, 64)
+		return f
+	default:
+		return 0
+	}
 }

@@ -24,17 +24,14 @@ func main() {
 
 	r := gin.Default()
 
-	// CORS configuration
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{os.Getenv("CORS_ALLOWED_ORIGINS")}
 	r.Use(cors.New(config))
 
-	// Dependencies
 	dataCache := cache.NewCache()
 	marketService := services.NewMarketService()
 	assetHandler := handlers.NewAssetHandler(marketService, dataCache)
 
-	// Routes
 	api := r.Group("/api")
 	{
 		api.GET("/crypto", assetHandler.GetCrypto)
