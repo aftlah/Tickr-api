@@ -84,7 +84,7 @@ func (h *AssetHandler) GetIndoStocks(c *gin.Context) {
 
 func (h *AssetHandler) GetAssetDetail(c *gin.Context) {
 	symbol := c.Param("symbol")
-	
+
 	// Check cache
 	cacheKey := "asset_detail_" + symbol
 	if cached, found := h.cache.Get(cacheKey); found {
@@ -100,4 +100,24 @@ func (h *AssetHandler) GetAssetDetail(c *gin.Context) {
 
 	h.cache.Set(cacheKey, detail, 1*time.Minute)
 	c.JSON(http.StatusOK, detail)
+}
+
+func (h *AssetHandler) GetAssetHistory(c *gin.Context) {
+	symbol := c.Param("symbol")
+	period := c.DefaultQuery("period", "1D")
+
+	cacheKey := "asset_history_" + symbol + "_" + period
+	if cached, found := h.cache.Get(cacheKey); found {
+		c.JSON(http.StatusOK, cached)
+		return
+	}
+
+	history, err := h.marketService.GetAssetHistory(symbol, period)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.cache.Set(cacheKey, history, 1*time.Minute) // Short cache for "live" feel
+	c.JSON(http.StatusOK, history)
 }

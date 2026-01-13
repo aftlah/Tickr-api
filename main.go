@@ -38,6 +38,7 @@ func main() {
 		api.GET("/stocks/us", assetHandler.GetUSStocks)
 		api.GET("/stocks/indo", assetHandler.GetIndoStocks)
 		api.GET("/asset/:symbol", assetHandler.GetAssetDetail)
+		api.GET("/asset/:symbol/history", assetHandler.GetAssetHistory)
 	}
 
 	log.Printf("Server starting on port %s", port)
