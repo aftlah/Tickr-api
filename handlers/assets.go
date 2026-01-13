@@ -84,8 +84,20 @@ func (h *AssetHandler) GetIndoStocks(c *gin.Context) {
 
 func (h *AssetHandler) GetAssetDetail(c *gin.Context) {
 	symbol := c.Param("symbol")
-	// For detail, we reuse the existing logic or add a specific one.
-	// For now, let's keep it simple and just return the symbol data.
-	// (Actual implementation could fetch specific ticker/quote)
-	c.JSON(http.StatusOK, gin.H{"symbol": symbol})
+	
+	// Check cache
+	cacheKey := "asset_detail_" + symbol
+	if cached, found := h.cache.Get(cacheKey); found {
+		c.JSON(http.StatusOK, cached)
+		return
+	}
+
+	detail, err := h.marketService.GetAssetDetail(symbol)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.cache.Set(cacheKey, detail, 1*time.Minute)
+	c.JSON(http.StatusOK, detail)
 }

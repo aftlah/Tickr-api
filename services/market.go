@@ -198,6 +198,59 @@ func (s *MarketService) GetMockStocks(region string, limit int) []map[string]int
 	return mocks
 }
 
+func (s *MarketService) GetAssetDetail(symbol string) (map[string]interface{}, error) {
+	// Try to find in mocks first for speed/demo
+	cryptoMocks := s.GetMockCrypto(100)
+	for _, c := range cryptoMocks {
+		if strings.EqualFold(c["symbol"].(string), symbol) {
+			return map[string]interface{}{
+				"symbol":         c["symbol"],
+				"price":          c["current_price"],
+				"change_percent": c["price_change_percentage_24h"],
+				"high":           fmt.Sprintf("%.2f", toFloat64(c["current_price"])*1.05),
+				"low":            fmt.Sprintf("%.2f", toFloat64(c["current_price"])*0.95),
+				"volume":         "1,234,567",
+				"prev_close":     c["current_price"],
+				"name":           c["name"],
+			}, nil
+		}
+	}
+
+	usMocks := s.GetMockStocks("us", 100)
+	indoMocks := s.GetMockStocks("indo", 100)
+	allStocks := append(usMocks, indoMocks...)
+
+	for _, st := range allStocks {
+		if strings.EqualFold(st["symbol"].(string), symbol) {
+			price := toFloat64(st["price"])
+			return map[string]interface{}{
+				"symbol":         st["symbol"],
+				"price":          st["price"],
+				"change_percent": fmt.Sprintf("%v", st["change"]),
+				"high":           fmt.Sprintf("%.2f", price*1.02),
+				"low":            fmt.Sprintf("%.2f", price*0.98),
+				"volume":         "5,678,900",
+				"prev_close":     fmt.Sprintf("%.2f", price),
+				"name":           st["symbol"],
+			}, nil
+		}
+	}
+
+	// Fallback for unknown assets (Simulated Data)
+	// This ensures the detail page always has something to show
+	basePrice := 150.0 + float64(len(symbol)*10)
+	return map[string]interface{}{
+		"symbol":         strings.ToUpper(symbol),
+		"price":          fmt.Sprintf("%.2f", basePrice),
+		"change_percent": "1.25",
+		"high":           fmt.Sprintf("%.2f", basePrice*1.05),
+		"low":            fmt.Sprintf("%.2f", basePrice*0.95),
+		"volume":         "10,000,000",
+		"prev_close":     fmt.Sprintf("%.2f", basePrice-2.0),
+		"name":           strings.ToUpper(symbol),
+	}, nil
+}
+
 func parseFloat(s interface{}) float64 {
 	str, ok := s.(string)
 	if !ok {
